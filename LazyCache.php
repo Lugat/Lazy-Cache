@@ -116,7 +116,18 @@
                 
       }
          
-    } 
+    }
+    
+    public static function flush()
+    {
+      
+      $basePath = self::getOption('path');
+      
+      foreach (glob($basePath.'/*') as $file) {
+        unlink($file);
+      }
+      
+    }
     
     public static function renderDynamic($statement)
     {

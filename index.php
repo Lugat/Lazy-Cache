@@ -4,7 +4,7 @@
    * Plugin Name: Lazy Cache
    * Plugin URI: http://squareflower.de
    * Description: 
-   * Version: 0.1.0
+   * Version: 0.1.1
    * Author: SquareFlower Websolutions (Lukas Rydygel) <hallo@squareflower.de>
    * Author URI: http://squareflower.de
    * Text Domain: lazy-cache
@@ -39,6 +39,38 @@
     });
 
   }, 0);
+  
+  add_action('init', function() {
+    
+    if (isset($_GET['lazy-cache'])) {
+      
+      switch ($_GET['lazy-cache']) {
+        
+        case 'flush':
+          
+          LazyCache::flush();
+          
+          add_action('admin_notices', function() { 
+            echo '<div class="notice notice-success is-dismissible"><p>'.__('The cache has been flushed!', 'lazy-cache').'</p></div>';
+          });
+          
+        break;
+        
+      }
+      
+    }
+    
+  });
+
+  add_action('admin_bar_menu', function($adminBar) {
+
+    $adminBar->add_node([
+      'id' => 'lazy-cache-flush',
+      'title' => '<span class="ab-icon dashicons dashicons-trash"></span> Lazy Cache Flush',
+      'href' => '?lazy-cache=flush'
+    ]);
+
+  }, 999);
   
   register_activation_hook(__FILE__, ['LazyCache', 'install']);
     
