@@ -4,7 +4,7 @@
    * Plugin Name: Lazy Cache
    * Plugin URI: http://squareflower.de
    * Description: 
-   * Version: 0.0.1
+   * Version: 0.0.2
    * Author: SquareFlower Websolutions (Lukas Rydygel) <hallo@squareflower.de>
    * Author URI: http://squareflower.de
    * Text Domain: lazy-cache
@@ -21,24 +21,25 @@
 
   add_action('template_redirect', function() {
     
-    $data = LazyCache::read();
-    if ($data !== false) {
-      
-      $html = LazyCache::evaluateFragments($data);
-      
-      echo $html;
+    $html = LazyCache::load();
+    if ($html !== false) {
+            
+      echo LazyCache::evaluateFragments($html);
       exit();
       
     }
+
+  }, 0);
+  
+  add_action('template_redirect', function() {
     
     ob_start(function($html) {
-      
-      LazyCache::minify($html);
-      
-      LazyCache::write($html);
-      
-      return $html;
+
+      LazyCache::write($html);  
+
+      header('Location: '.$_SERVER['REQUEST_URI']);
+      exit();
 
     });
 
-  }, 0);
+  }, 9999);

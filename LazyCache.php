@@ -6,15 +6,14 @@
     protected static $file;
     protected static $options;
     
-    protected static $fragments = [];
+    public static $fragments = [];
     
     public static function init()
     {
       
       $defaultOptions = [
         'path' => __DIR__.'/../../_lazy-cache',
-        'timeout' => 60*60*24,
-        'gzip' => false
+        'timeout' => 60*60*24
       ];
             
       self::$options = array_merge($defaultOptions, get_option('lazy-cache', []));
@@ -33,22 +32,14 @@
         'fragments' => self::$fragments
       ];
       
-      self::$fragments = [];
-      
       $timeout = time() + self::$options['timeout'];
-      
-      $data = serialize($data);
-      
-      if (self::$options['gzip']) {
-        $data = gzcompress($data);
-      }
-      
-      file_put_contents(self::$file, $data);
+            
+      file_put_contents(self::$file, serialize($data));
       touch(self::$file, $timeout, $timeout);
-      
+            
     }
     
-    public static function read()
+    public static function load()
     {
       
       if (file_exists(self::$file)) {
@@ -57,13 +48,11 @@
 
         if ($time >= time() || is_null($time)) {
           
-          $data = file_get_contents(self::$file);
+          $data = unserialize(file_get_contents(self::$file));
           
-          if (self::$options['gzip']) {
-            $data = gzuncompress($data);
-          }
+          self::$fragments = $data['fragments'];
           
-          return unserialize($data);
+          return $data['html'];
           
         } else {
           unlink(self::$file);
@@ -86,19 +75,20 @@
       
     }
     
-    public static function evaluateFragments(array $data)
+    public static function evaluateFragments($html)
     {
       
-      return preg_replace_callback('/<!\[CDATA\[LAZY-CACHE-FRAGMENT-(\d+)\]\]>/', function($matches) use($data) {
+      $fragments = self::$fragments;
+            
+      return preg_replace_callback('/<!\[CDATA\[LAZY-CACHE-FRAGMENT-(\d+)\]\]>/', function($matches) use($fragments) {
         
         list(, $n) = $matches;
         
-        if (isset($data['fragments'][$n])) {
+        if (isset($fragments[$n])) {
           
           ob_start();
-          ob_implicit_flush(false);
 
-          eval($data['fragments'][$n]);  
+          eval($fragments[$n]);
 
           return ob_get_clean();
           
@@ -106,29 +96,8 @@
         
         return null;
         
-      }, $data['html']);
+      }, $html);
       
-    }
-    
-    public static function minify(&$html)
-    {
-      
-      $search = [
-        '/\>[^\S ]+/s',     // strip whitespaces after tags, except space
-        '/[^\S ]+\</s',     // strip whitespaces before tags, except space
-        '/(\s)+/s',         // shorten multiple whitespace sequences
-        '/<!--(.|\s)*?-->/' // Remove HTML comments
-      ];
-
-      $replace = [
-        '>',
-        '<',
-        '\\1',
-        ''
-      ];
-
-      $html = trim(preg_replace($search, $replace, $html));
-
     }
     
   }
