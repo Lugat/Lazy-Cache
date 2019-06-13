@@ -5,8 +5,11 @@ This plugin may not look special. It uses the filesystem to store the cached req
 
 ```php
 // show correct date and time
-lazy_cache_render_dynamic('echo (new DateTime)->format("d.m.Y H:i:s");');
+render_dynamic('echo (new DateTime)->format("d.m.Y H:i:s");');
 
 // render templates dynamically
-lazy_cache_render_dynamic('get_template_part("username");');
+render_dynamic('get_template_part("username");');
+
+// or even better
+get_template_part_dynamic('username');
 ```
