@@ -4,7 +4,7 @@
    * Plugin Name: Lazy Cache
    * Plugin URI: http://squareflower.de
    * Description: 
-   * Version: 0.1.1
+   * Version: 0.1.2
    * Author: SquareFlower Websolutions (Lukas Rydygel) <hallo@squareflower.de>
    * Author URI: http://squareflower.de
    * Text Domain: lazy-cache
@@ -17,22 +17,6 @@
   add_action('admin_menu', function() {
     
     add_submenu_page('options-general.php', 'Lazy Cache', 'Lazy Cache', 'manage_options', 'lazy-cache', function() {
-      
-      if (isset($_POST['lazy-cache'])) {
-        
-        $options = (array) $_POST['lazy-cache'];
-        
-        $options['ignore-paths'] = explode("\n", $options['ignore-paths']);
-        $options['ignore-paths'] = array_map('trim', $options['ignore-paths']);
-        $options['ignore-paths'] = array_filter($options['ignore-paths']);
-        
-        update_option('lazy-cache', array_merge(get_option('lazy-cache'), $options));
-        
-        add_action('admin_notices', function() { 
-          echo '<div class="notice notice-success is-dismissible"><p>'.__('The settings have been saved!', 'lazy-cache').'</p></div>';
-        });
-        
-      }
 
       include 'admin.php';
 
@@ -40,11 +24,53 @@
 
   }, 0);
   
+  add_action('admin_init', function() {
+    
+    if (isset($_REQUEST['lazy-cache'])) {
+      
+      switch ($_REQUEST['lazy-cache']['action']) {
+        
+        case 'save':
+          
+          if (isset($_POST['lazy-cache'])) {
+
+            $options = (array) $_POST['lazy-cache'];
+
+            $options['ignore-paths'] = explode("\n", $options['ignore-paths']);
+            $options['ignore-paths'] = array_map('trim', $options['ignore-paths']);
+            $options['ignore-paths'] = array_filter($options['ignore-paths']);
+
+            update_option('lazy-cache', array_merge(get_option('lazy-cache'), $options));
+
+            add_action('admin_notices', function() { 
+              echo '<div class="notice notice-success is-dismissible"><p>'.__('The settings have been saved!', 'lazy-cache').'</p></div>';
+            });
+
+          }
+          
+        break;
+      
+        case 'reset':
+          
+          LazyCache::install();
+          
+          add_action('admin_notices', function() { 
+            echo '<div class="notice notice-success is-dismissible"><p>'.__('The settings have been reset!', 'lazy-cache').'</p></div>';
+          });
+          
+        break;
+        
+      }
+      
+    }
+    
+  });
+  
   add_action('init', function() {
     
-    if (isset($_GET['lazy-cache'])) {
+    if (isset($_REQUEST['lazy-cache'])) {
       
-      switch ($_GET['lazy-cache']) {
+      switch ($_REQUEST['lazy-cache']) {
         
         case 'flush':
           

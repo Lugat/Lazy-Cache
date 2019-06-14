@@ -65,13 +65,27 @@
             <p class="description"><?= __('Number of seconds how long the cache-files are valid.', 'lazy-cache'); ?></p>
           </td>
         </tr>
+        
+        <tr>
+          <th scope="row">
+            <label for="lazy-cache-ignore-paths"><?= __('Ignore paths', 'lazy-cache'); ?></label>
+          </th>
+          <td>
+            <textarea name="lazy-cache[ignore-paths]" id="lazy-cache-ignore-paths" class="regular-text"><?= implode("\n", $options['ignore-paths']); ?></textarea>
+            <p class="description"><?= __('One path per line.', 'lazy-cache'); ?></p>
+          </td>
+        </tr>
 
       </tbody>
 
     </table>
 
     <p class="submit">
-      <input type="submit" name="submit" id="submit" class="button button-primary" value="<?= __('Save', 'lazy-cache'); ?>">
+      
+      <button type="submit" name="lazy-cache[action]" value="save" id="submit" class="button button-primary"><?= __('Save', 'lazy-cache'); ?></button>
+      
+      <button type="submit" name="lazy-cache[action]" value="reset" id="submit" class="button button-secondary"><?= __('Reset', 'lazy-cache'); ?></button>
+            
     </p>
   
   </form>

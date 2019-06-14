@@ -3,6 +3,7 @@
   abstract class LazyCache
   {
     
+    protected static $path;
     protected static $file;
     protected static $options;
     
@@ -11,12 +12,13 @@
     public static function install()
     {
       
-      add_option('lazy-cache', [
+      update_option('lazy-cache', [
         'active' => 0,
         'path' => __DIR__.'/../../_lazy-cache',
         'timeout' => 60*60*24,
         'ignore-logged-in-users' => 0,
         'ignore-query-string' => 0,
+        'ignore-paths' => [],
         'minify-html' => 0
       ]);
       
@@ -39,7 +41,9 @@
         $path = parse_url($path, PHP_URL_PATH);
       }
       
-      self::$file = $basePath.'/'.md5($path);
+      self::$path = $path;
+      
+      self::$file = $basePath.'/'.md5(self::$path);
       
     }
     
@@ -173,6 +177,17 @@
           
           return false;
           
+        }
+        
+        $paths = self::getOption('ignore-paths');
+        if (!empty($paths)) {
+                  
+          if (preg_match('/('.addcslashes(implode('|', $paths), '/').')/i', self::$path)) {
+
+            return false;
+
+          }
+        
         }
         
         return true;
