@@ -4,7 +4,7 @@
    * Plugin Name: Lazy Cache
    * Plugin URI: https://wordpress.org/plugins/lazy-cache/
    * Description: Simple cache plugin which supports dynamic rendering
-   * Version: 0.1.3
+   * Version: 0.1.4
    * Author: SquareFlower Websolutions (Lukas Rydygel) <hallo@squareflower.de>
    * Author URI: http://squareflower.de
    * License: GPL2+

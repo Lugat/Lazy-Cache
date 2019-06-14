@@ -13,13 +13,17 @@
     {
       
       update_option('lazy-cache', [
-        'active' => 0,
+        // fix
         'path' => __DIR__.'/../../_lazy-cache',
-        'timeout' => 60*60*24,
+        // general
+        'active' => 0,
+        'timeout' => 86400, // 1 day
+        // rules
         'ignore-logged-in-users' => 0,
         'ignore-query-string' => 0,
         'ignore-paths' => [],
-        'minify-html' => 0
+        // extras
+        'minify-html' => 0,
       ]);
       
     }
@@ -107,8 +111,14 @@
             'html' => $html,
             'fragments' => self::$fragments
           ];
-               
-          $timeout = time() + self::getOption('timeout', 60);
+          
+          $timeout = intval(self::getOption('timeout', 0));
+          
+          if ($timeout === 0) {
+            $timeout = 31536000; // 1 year
+          }     
+                  
+          $timeout += time();
 
           file_put_contents(self::$file, serialize($data));
           touch(self::$file, $timeout, $timeout);
@@ -170,22 +180,22 @@
     
     protected static function useCache()
     {
-      
+            
       if (self::isChecked('active')) {
         
         if (self::isChecked('ignore-logged-in-users') && is_user_logged_in()) {
-          
           return false;
-          
+        }
+        
+        if (get_post_status() !== 'publish') {
+          return false;
         }
         
         $paths = self::getOption('ignore-paths');
         if (!empty($paths)) {
                   
           if (preg_match('/('.addcslashes(implode('|', $paths), '/').')/i', self::$path)) {
-
             return false;
-
           }
         
         }

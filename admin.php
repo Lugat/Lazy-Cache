@@ -12,8 +12,9 @@
 
   <form method="post" novalidate="novalidate">
 
+    <h2 class="title"><?= __('General settings', 'lazy-cahce'); ?></h2>
+    
     <table class="form-table">
-
       <tbody>
 
         <tr>
@@ -26,6 +27,28 @@
           </td>
         </tr>
 
+        <tr>
+          <th scope="row">
+            <label for="lazy-cache-timeout"><?= __('Timeout', 'lazy-cache'); ?></label>
+          </th>
+          <td>
+            <input name="lazy-cache[timeout]" type="number" id="lazy-cache-timeout" min="0" value="<?= $options['timeout']; ?>" class="regular-text">
+            <p class="description"><?= __('Number of seconds how long the cache-files are valid. Default is one day. Leave empty or 0 to store as long as possible.', 'lazy-cache'); ?></p>
+          </td>
+        </tr>
+        
+      </tbody>
+    </table>
+    
+    <hr />
+    
+    <h2 class="title"><?= __('Rules', 'lazy-cahce'); ?></h2>
+    
+    <p><?= __('You may specify some rules to avoid caching.'); ?><p>
+    
+    <table class="form-table">
+      <tbody>
+        
         <tr>
           <th scope="row">
             <label for="lazy-cache-ignore-logged-in-users"><?= __('Ignore logged in users', 'lazy-cache'); ?></label>
@@ -48,6 +71,28 @@
         
         <tr>
           <th scope="row">
+            <label for="lazy-cache-ignore-paths"><?= __('Ignore paths', 'lazy-cache'); ?></label>
+          </th>
+          <td>
+            <textarea name="lazy-cache[ignore-paths]" id="lazy-cache-ignore-paths" class="regular-text"><?= implode("\n", $options['ignore-paths']); ?></textarea>
+            <p class="description"><?= __('One path per line. To ignore the front-page use "/".', 'lazy-cache'); ?></p>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+    
+    <hr />
+    
+    <h2 class="title"><?= __('Extras', 'lazy-cahce'); ?></h2>
+    
+    <p><?= __('Lazy Cache offers some extra features which can be activated.'); ?><p>
+    
+    <table class="form-table">
+      <tbody>
+        
+        <tr>
+          <th scope="row">
             <label for="lazy-cache-minify-html"><?= __('Minify HTML', 'lazy-cache'); ?></label>
           </th>
           <td>
@@ -55,30 +100,11 @@
             <input name="lazy-cache[minify-html]" type="checkbox" id="lazy-cache-minify-html" <?= $options['minify-html'] == 1 ? 'checked' : ''; ?> value="1" />
           </td>
         </tr>
-
-        <tr>
-          <th scope="row">
-            <label for="lazy-cache-timeout"><?= __('Timeout', 'lazy-cache'); ?></label>
-          </th>
-          <td>
-            <input name="lazy-cache[timeout]" type="number" id="lazy-cache-timeout" min="0" value="<?= $options['timeout']; ?>" class="regular-text">
-            <p class="description"><?= __('Number of seconds how long the cache-files are valid.', 'lazy-cache'); ?></p>
-          </td>
-        </tr>
         
-        <tr>
-          <th scope="row">
-            <label for="lazy-cache-ignore-paths"><?= __('Ignore paths', 'lazy-cache'); ?></label>
-          </th>
-          <td>
-            <textarea name="lazy-cache[ignore-paths]" id="lazy-cache-ignore-paths" class="regular-text"><?= implode("\n", $options['ignore-paths']); ?></textarea>
-            <p class="description"><?= __('One path per line.', 'lazy-cache'); ?></p>
-          </td>
-        </tr>
-
       </tbody>
-
-    </table>
+    </table> 
+    
+    <hr />
 
     <p class="submit">
       
