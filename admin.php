@@ -82,9 +82,9 @@
 
     <p class="submit">
       
-      <button type="submit" name="lazy-cache[action]" value="save" id="submit" class="button button-primary"><?= __('Save', 'lazy-cache'); ?></button>
+      <button type="submit" name="lazy-cache-action" value="save" id="submit" class="button button-primary"><?= __('Save', 'lazy-cache'); ?></button>
       
-      <button type="submit" name="lazy-cache[action]" value="reset" id="submit" class="button button-secondary"><?= __('Reset', 'lazy-cache'); ?></button>
+      <button type="submit" name="lazy-cache-action" value="reset" id="submit" class="button button-secondary"><?= __('Reset', 'lazy-cache'); ?></button>
             
     </p>
   

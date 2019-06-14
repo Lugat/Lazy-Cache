@@ -2,11 +2,12 @@
   
   /**
    * Plugin Name: Lazy Cache
-   * Plugin URI: http://squareflower.de
-   * Description: 
-   * Version: 0.1.2
+   * Plugin URI: https://wordpress.org/plugins/lazy-cache/
+   * Description: Simple cache plugin which supports dynamic rendering
+   * Version: 0.1.3
    * Author: SquareFlower Websolutions (Lukas Rydygel) <hallo@squareflower.de>
    * Author URI: http://squareflower.de
+   * License: GPL2+
    * Text Domain: lazy-cache
    */
 
@@ -26,9 +27,9 @@
   
   add_action('admin_init', function() {
     
-    if (isset($_REQUEST['lazy-cache'])) {
+    if (isset($_REQUEST['lazy-cache-action'])) {
       
-      switch ($_REQUEST['lazy-cache']['action']) {
+      switch ($_REQUEST['lazy-cache-action']) {
         
         case 'save':
           
@@ -59,19 +60,7 @@
           });
           
         break;
-        
-      }
       
-    }
-    
-  });
-  
-  add_action('init', function() {
-    
-    if (isset($_REQUEST['lazy-cache'])) {
-      
-      switch ($_REQUEST['lazy-cache']) {
-        
         case 'flush':
           
           LazyCache::flush();
@@ -89,12 +78,16 @@
   });
 
   add_action('admin_bar_menu', function($adminBar) {
+    
+    if (is_admin()) {
 
-    $adminBar->add_node([
-      'id' => 'lazy-cache-flush',
-      'title' => '<span class="ab-icon dashicons dashicons-trash"></span> Lazy Cache Flush',
-      'href' => '?lazy-cache=flush'
-    ]);
+      $adminBar->add_node([
+        'id' => 'lazy-cache-flush',
+        'title' => '<span class="ab-icon dashicons dashicons-trash"></span> Lazy Cache Flush',
+        'href' => '?lazy-cache-action=flush'
+      ]);
+    
+    }
 
   }, 999);
   
