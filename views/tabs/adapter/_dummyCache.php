@@ -1,0 +1,1 @@
+<p><?= __('The cache is disabled. No configuration needed.', 'lazy-cache'); ?><p>

@@ -23,9 +23,14 @@
      * 
      * @return bool
      */
-    public function install() : bool
+    public static function install() : bool
     {
       return true;
+    }
+    
+    public static function key()
+    {
+      return lcfirst(basename(get_called_class()));
     }
     
     /**

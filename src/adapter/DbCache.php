@@ -1,22 +1,24 @@
 <?php
 
   /**
-   * FileCache
+   * DbCache
    * 
    * @package Jinx\LazyCache
    * @copyright Copyright (c) 2019 SquareFlower Websolutions
    * @license GPL2+
    * @author Lukas Rydygel <hallo@squareflower.de>
    * @version 0.1.0
-   * @since 0.2.0
+   * @since 0.3.0
    */
 
   namespace Jinx\LazyCache;
   
   use Jinx\LazyCache;
     
-  class FileCache extends AbstractCache implements CacheInterface
+  class DbCache extends AbstractCache implements CacheInterface
   {
+    
+    protected $wpdb;
     
     /**
      * Set the options for this adapter
@@ -25,32 +27,25 @@
      */
     public static function install() : bool
     {
-      
+            
       return LazyCache::setOptions([
-        'fileCache' => [
-          'path' => 'cache'
+        'dbCache' => [
+          'tableName' => 'lazy-cache'
         ]
       ]);
       
     }
     
     /**
-     * Create the cache folder
+     * Set wbdb
      */
     public function init()
     {
-      @wp_mkdir_p(WP_CONTENT_DIR.'/'.$this->path);
-    }
-    
-    /**
-     * Get the cache file
-     * 
-     * @param string $key
-     * @return string
-     */
-    protected function getCacheFile(string $key) : string
-    {
-      return WP_CONTENT_DIR.'/'.$this->path.'/'.$this->getCacheKey($key);
+      
+      global $wpdb;
+      
+      $this->wbdb = $wpdb;
+      
     }
     
     /**
@@ -61,22 +56,19 @@
      */
     public function get(string $key)
     {
+            
+      $query = "SELECT `data`, `timeout` FROM $this->tableName WHERE `key` = $key LIMIT 0, 1";
       
-      $file = $this->getCacheFile($key);
-
-      // if cache file exists
-      if (file_exists($file)) {
+      $row = $this->wpdb->get_row($query);
+      
+      if (isset($row)) {
         
-        $time = filemtime($file);
-
-        // if cache is valid, return it
-        if ($time >= time() || is_null($time)) {
-          return unserialize(file_get_contents($file));
-        // otherwise delete it
+        if ($row->timeout >= time()) {
+          return unserialize($row->data);
         } else {
-          unlink($file);
+          $this->delete($key);
         }
-
+        
       }
 
       return false;
@@ -102,12 +94,10 @@
       }
       
       $timeout += time();
+            
+      $query = "INSERT INTO $this->tableName (`key`, `data`, `timeout`) VALUES ($key, ".serialize($data).", $timeout)";
       
-      $file = $this->getCacheFile($key);
-      
-      // write content the cache file and set the time
-      file_put_contents($file, serialize($data));
-      touch($file, $timeout, $timeout);
+      $this->wbdb->query($query);
       
     }
 
@@ -120,15 +110,10 @@
     public function delete(string $key) : bool
     {
       
-      $file = $this->getCacheFile($key);
-
-      // if cache file exists, delete the file
-      if (file_exists($file)) {
-        return unlink($file);
-      }
+      $query = "DELETE FROM $this->tableName WHERE `key` = $key";
       
-      return false;
-      
+      return $this->wbdb->query($query);
+            
     }
 
     /**
@@ -137,10 +122,9 @@
     public function flush()
     {
       
-      // glob cache folder and delete each file
-      foreach (glob($this->path.'/*') as $file) {
-        unlink($file);
-      }
+      $query = "DELETE FROM $this->tableName";
+      
+      $this->wbdb->query($query);
       
     }
     

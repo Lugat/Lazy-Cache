@@ -26,7 +26,7 @@
      * 
      * @param string $action
      */
-    public static function run(string $action) : string
+    public static function run(string $action)
     {
       
       $controller = new self;
@@ -36,7 +36,7 @@
       if (method_exists($controller, $action)) {
         return $controller->$action();
       } else {
-        \wp_die(__("The action '$action' does not exist.", 'Lazy Cache'), 'Lazy Cache');
+        \wp_die(sprintf(__("The action '%s' does not exist.", 'Lazy Cache'), 'Lazy Cache'), $action);
       }
       
     }
@@ -56,7 +56,7 @@
         }, $file, $params);
         
       } else {
-        \wp_die(__("The view '$view' does not exist.", 'Lazy Cache'), 'Lazy Cache');
+        \wp_die(sprintf(__("The view '%s' does not exist.", 'Lazy Cache'), 'Lazy Cache'), $view);
       }
       
     }
@@ -66,11 +66,19 @@
      */
     public function actionAdmin()
     {
-      
+            
       $options = LazyCache::getOptions();
       
+      $adapters = apply_filters(LazyCache::FILTER_ADAPTERS, []);
+      
+      $postTypes = get_post_types([
+        'publicly_queryable' => true
+      ], 'object');
+                       
       return $this->render('admin', [
-        'options' => $options
+        'options' => $options,
+        'adapters' => $adapters,
+        'postTypes' => $postTypes
       ]);
       
     }
@@ -87,7 +95,7 @@
         $options = (array) $_POST['lazy-cache'];
         
         // sanitize and validate
-        $options['enable'] = boolval($options['enable']);
+        $options['adapter'] = sanitize_text_field($options['adapter']);
         $options['timeout'] = intval($options['timeout']);
         $options['enablePageCache'] = boolval($options['enablePageCache']);
         $options['ignoreLoggedInUsers'] = boolval($options['ignoreLoggedInUsers']);
@@ -104,7 +112,7 @@
         });
         
       }
-      
+            
     }
     
     /**
@@ -114,11 +122,11 @@
     {
       
       LazyCache::install();
-      
+            
       add_action('admin_notices', function() { 
         echo '<div class="notice notice-success is-dismissible"><p>'.__('The settings have been reset!', 'lazy-cache').'</p></div>';
       });
-      
+            
     }
     
     /**
@@ -132,6 +140,48 @@
       add_action('admin_notices', function() { 
         echo '<div class="notice notice-success is-dismissible"><p>'.__('The cache has been flushed!', 'lazy-cache').'</p></div>';
       });
+            
+    }
+    
+    /**
+     * Heatup action
+     */
+    public function actionHeatup()
+    {
+      
+      $postTypes = get_post_types([
+        'publicly_queryable' => true
+      ]);
+      
+      $posts = get_posts([
+        'post_type' => $postTypes,
+        'posts_per_page' => -1
+      ]);
+      
+      foreach ($posts as $post) {
+        $this->ping(get_permalink($post));
+      }
+            
+    }
+    
+    protected function ping($url)
+    {
+      
+      $curl = curl_init();
+      
+      curl_setopt($curl, CURLOPT_URL, $url);
+
+      curl_setopt($curl, CURLOPT_TIMEOUT, 1);
+      curl_setopt($curl, CURLOPT_HEADER, false);
+      curl_setopt($curl, CURLOPT_RETURNTRANSFER, false);
+      curl_setopt($curl, CURLOPT_FORBID_REUSE, true);
+      curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, true);
+      curl_setopt($curl, CURLOPT_DNS_CACHE_TIMEOUT, 10);
+      curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
+
+      curl_exec($curl);   
+
+      curl_close($curl); 
       
     }
     

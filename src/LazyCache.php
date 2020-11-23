@@ -20,16 +20,22 @@
   {
     
     const OPTIONS_KEY = 'lazy-cache';
+    const DYNAMIC_PLACEHOLDER_PREFIX = 'LAZY-CACHE-DYNAMIC-';
+    
+    const FILTER_AUTOLOAD = 'lazy_cache_autoload';
+    const FILTER_ADAPTERS = 'lazy_cache_adapters';
+    const FILTER_USE_CACHE = 'lazy_cache_use_cache';
+    const FILTER_USE_PAGE_CACHE = 'lazy_cache_use_page_cache';
     
     protected static $instance;
     
     protected $request;
-    protected $fragments = [];
+    protected $dynamicPlaceholders = [];
     protected $adapter;
     protected $key;
     protected $timeout;
     
-    protected $caching = false;
+    public $caching = false;
     
     /**
      * Set the original plugin options
@@ -39,21 +45,44 @@
       
       self::setOptions([
         // general
-        'enable' => false,
+        'adapterClass' => 'Jinx\LazyCache\DummyCache',
         'timeout' => 86400, // 1 day
         'prefix' => 'lc_', 
-        'adapterClass' => '\Jinx\LazyCache\FileCache',
+        // page ache
         'enablePageCache' => false,
+        'postTypes' => ['page', 'post'],
+        // rules
         'ignoreLoggedInUsers' => false,
         'ignoreQueryString' => false,
-        'ignoreQueryParams' => [],
-        'ignorePaths' => [],
+        'ignoreQueryParams' => false,
+        'ignoreQueryParamsValues' => [],
+        'ignorePaths' => false,
+        'ignorePathsValues' => [],
+        // extras
         'minifyHtml' => false,
       ]);
       
       self::installAdapter();
       
+      return true;
+      
     }    
+    
+    /*public static function schedule()
+    {
+      
+      // @todo change recurrence
+      if (!wp_next_scheduled('lazy-cache-flush')) {
+        
+        wp_schedule_event(time(), 'hourly', function() {
+          
+          LazyCache::getInstance()->adapter->flush();
+                    
+        });
+        
+      }
+
+    }*/
     
     /**
      * Set and overwrite the plugins options
@@ -81,52 +110,24 @@
      */
     public static function installAdapter()
     {
-      
-      $adapterClass = self::getInstance()->loadAdapter();
-      
-      $adapterClass::install();
-      
-    }
-    
-    /**
-     * Load the active adapter
-     * 
-     * @return string
-     */
-    protected function loadAdapter() : string
-    {
-      
-      $adapterClass = $this->adapterClass;
-      $basename = basename($adapterClass);
-      
-      // require if the adapter is build in
-      $adapterFile = __DIR__."/adapter/$basename.php";
-      if (file_exists($adapterFile)) {
-        require_once $adapterFile;
-      } else {
-        \wp_die(__("The adapter '$basename' does not exist.", 'Lazy Cache'), 'Lazy Cache');
-      }
-      
-      return $adapterClass;
-      
+      self::getInstance()->adapterClass::install();
     }
 
     /**
      * Init
      * 
-     * @see \Jinx\LazyCache\Configurable
+     * @see Jinx\LazyCache\Configurable
      */
     public function init()
     {
       
       $this->request = $this->getRequest();
       
-      // load the active adapter
-      $adapterClass = $this->loadAdapter();
+      $adapterKey = $this->adapterClass::key();
       
-      // instanciate the active adapter with its confug
-      $adapterConfigKey = lcfirst(basename($adapterClass));
-      $this->adapter = new $adapterClass($this->$adapterConfigKey);
+      $adapterConfig = isset($this->$adapterKey) ? $this->$adapterKey : [];
+      
+      $this->adapter = new $this->adapterClass($adapterConfig);
       
     }
     
@@ -169,82 +170,23 @@
     }
     
     /**
-     * Check if the cache should be used
-     * 
-     * @return bool
-     */
-    protected function useCache() : bool
-    {
-      
-      // if cache is enabled
-      if ($this->enable) {
-        
-        // if logged in user should be ignored and user is logged in
-        if ($this->ignoreLoggedInUsers && is_user_logged_in()) {
-          return false;
-        }
-        
-        // only cache published content
-        if (get_post_status() !== 'publish') {
-          return false;
-        }
-        
-        return true;
-        
-      }
-      
-      return false;
-      
-    }
-    
-    /**
-     * Check if the page cache should be used
-     * 
-     * @return bool
-     */
-    protected function usePageCache() : bool
-    {
-      
-      // if cache should be used and page cache is enabled
-      if ($this->useCache() && $this->enablePageCache) {
-        
-        // if ignore paths are defined
-        if (!empty($this->ignorePaths)) {
-          
-          // if request URI matches one of the ignore paths
-          if (preg_match('/('.addcslashes(implode('|', $this->ignorePaths), '/').')/i', self::$path)) {
-            return false;
-          }
-        
-        }
-        
-        // set caching to active
-        $this->caching = true;
-        
-        return true;
-        
-      }
-      
-      return false;
-      
-    }
-    
-    /**
      * Load data for the page cache
      */
     public static function loadPageCache()
     {
       
-      $instance = self::getInstance();
-      
-      if ($instance->usePageCache()) {
+      if (apply_filters(self::FILTER_USE_CACHE, true) && apply_filters(self::FILTER_USE_PAGE_CACHE, true)) {
+        
+        $instance = self::getInstance();
+        
+        $instance->caching = true;
         
         // if content is cached
         $data = $instance->adapter->get($instance->request);
         if ($data !== false) {
           
-          // evaluate the fragments in the content and echo it
-          echo $instance->evaluateFragments($data['html'], $data['fragments']);
+          // evaluate the dynamic placebolder in the content and echo it
+          echo $instance->evaluateStatements($data['html'], $data['dynamicPlaceholders']);
           exit();
           
         }
@@ -272,13 +214,13 @@
             $html = Helper::minifyHtml($html);
           }
 
-          // save the content and fragments to the cache
+          // save the content and dynamic placeholders to the cache
           $instance->adapter->set($instance->request, [
             'html' => $html,
-            'fragments' => $instance->fragments
+            'dynamicPlaceholders' => $instance->dynamicPlaceholders
           ]);
 
-          // reload the page, so fragments will be rendered
+          // reload the page, so dynamic placeholders will be rendered
           // @todo check if this can be avoided
           header('Location: '.$_SERVER['REQUEST_URI']);
           exit();
@@ -301,12 +243,12 @@
       // if caching is active
       if ($this->caching) {
 
-        // get current number of fragments
-        $n = count($this->fragments);
-        $this->fragments[] = $statement;
+        // get current number of dynamic placeholders
+        $n = count($this->dynamicPlaceholders);
+        $this->dynamicPlaceholders[] = $statement;
 
         // return placeholder
-        return "<![CDATA[LAZY-CACHE-$n]]>";
+        return '<![CDATA['.self::DYNAMIC_PLACEHOLDER_PREFIX.$n.']]>';
       
       }
       
@@ -316,23 +258,23 @@
     }
     
     /**
-     * Evaluate fragments in HTML content
+     * Evaluate statements from dynamic placeholders in HTML content
      * 
      * @param string $html
-     * @param array $fragments
+     * @param array $statements
      * @return string
      */
-    public function evaluateFragments(string $html, array $fragments) : string
+    public function evaluateStatements(string $html, array $statements) : string
     {
       
       // search and replace the fragment placeholders
-      return preg_replace_callback('/<!\[CDATA\[LAZY-CACHE-(\d+)\]\]>/', function($matches) use($fragments) {
+      return preg_replace_callback('/<!\[CDATA\['.self::DYNAMIC_PLACEHOLDER_PREFIX.'(\d+)\]\]>/', function($matches) use($statements) {
         
         list(, $n) = $matches;
         
         // evaluate the statement of the fragment
-        if (isset($fragments[$n])) {
-          return $this->evaluateStatment($fragments[$n]);
+        if (isset($statements[$n])) {
+          return $this->evaluateStatment($statements[$n]);
         }
         
         // return empty string
@@ -358,7 +300,7 @@
 
       return ob_get_clean();
       
-    }
+    }  
     
     /**
      * Begine the cache
@@ -370,7 +312,7 @@
     public function beginCache(string $key, int $timeout = 0) : bool
     {
       
-      if ($this->useCache()) {
+      if (apply_filters(self::FILTER_USE_CACHE, true)) {
         
         // if content is cached, echo it and return false
         $data = $this->adapter->get($key);
@@ -401,30 +343,26 @@
      */
     public function endCache()
     {
-      
-      if ($this->useCache()) {
-        
-        // is key and timeout has been set by beginCache
-        if (isset($this->key, $this->timeout)) {
-      
-          // get content
-          $html = ob_get_clean();
+              
+      // is key and timeout has been set by beginCache
+      if (isset($this->key, $this->timeout)) {
 
-          // if HTML should be minified
-          if ($this->minifyHtml) {
-            $html = Helper::minifyHtml($html);
-          }
+        // get content
+        $html = ob_get_clean();
 
-          // save the content to the cache
-          $this->adapter->set($this->request, $html, $this->timeout);
-
-          unset($this->key);
-          unset($this->timeout);
-        
+        // if HTML should be minified
+        if ($this->minifyHtml) {
+          $html = Helper::minifyHtml($html);
         }
+
+        // save the content to the cache
+        $this->adapter->set($this->request, $html, $this->timeout);
+
+        unset($this->key);
+        unset($this->timeout);
         
         echo $html;
-      
+
       }
       
     }

@@ -30,7 +30,7 @@
      * @param type $value
      * @param int $timeout
      */
-    public function set(string $key, $value, int $timeout);
+    public function set(string $key, $value, int $timeout = 0);
     
     /**
      * Delete the cache content
